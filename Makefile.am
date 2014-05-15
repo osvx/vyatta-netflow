@@ -18,3 +18,9 @@ install-exec-hook:
 	cd templates-cfg; $(cpiop) $(DESTDIR)$(cfgdir)
 	mkdir -p $(DESTDIR)$(opdir)
 	cd templates-op; $(cpiop) $(DESTDIR)$(opdir)
+	mkdir -p $(DESTDIR)/etc/ppp/ip-up.d
+	cp sysconf/vyatta-update-netflow-interfaces $(DESTDIR)/etc/ppp/ip-up.d/vyatta-update-netflow-interfaces
+	chmod 755 $(DESTDIR)/etc/ppp/ip-up.d/vyatta-update-netflow-interfaces
+	mkdir -p $(DESTDIR)/etc/ppp/ip-down.d
+	cp sysconf/vyatta-update-netflow-interfaces $(DESTDIR)/etc/ppp/ip-down.d/vyatta-update-netflow-interfaces
+	chmod 755 $(DESTDIR)/etc/ppp/ip-down.d/vyatta-update-netflow-interfaces

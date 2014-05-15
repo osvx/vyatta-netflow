@@ -350,12 +350,22 @@ sub acct_get_int_map {
 
     my $output = '';
     foreach my $intf (@intfs) {
-        my $ifindx = acct_get_ifindx($intf);
-        if (defined $ifindx) {
-            $output .= "id=$ifindx\tin=$ifindx\n";
-        } else {
-            print "Warning: unknow ifindx for [$intf]\n";
-        }
+	my $ifindx = acct_get_ifindx($intf);
+	if (defined $ifindx && $ifindx ne "") {
+	    $output .= "id=$ifindx\tin=$ifindx\n";
+	} else {
+	    print "Warning: unknow ifindx for [$intf]\n";
+	}
+    }
+    return $output;
+}
+
+sub acct_get_active_interfaces {
+    my (@intfs) = @_;
+
+    my $output = '';
+    foreach my $intf (@intfs) {
+	$output .= $intf . "\n";
     }
     return $output;
 }
@@ -365,13 +375,18 @@ sub acct_get_int_map {
 # main
 #
 
-my ($action, $intf);
+my ($action, $intf, $use_late_chains);
 
 GetOptions("action=s"      => \$action,
            "intf=s"        => \$intf,
+           "late"         => \$use_late_chains,
 );
 
 die "Undefined action" if ! $action;
+
+if (defined $use_late_chains) {
+    $table_chain_entry = "late";
+}
 
 if ($action eq 'add-intf') {
     die "Error: must include interface\n" if ! defined $intf;
@@ -400,6 +415,8 @@ if ($action eq 'update') {
     my @interfaces = $config->returnValues();
     my $conf_file = acct_get_conf_file();
     if (scalar(@interfaces) > 0) {
+	my $map_interfaces = acct_get_active_interfaces(@interfaces);
+	acct_write_file('/var/run/uacctd_active_interfaces', $map_interfaces);
         my $map_conf = acct_get_int_map(@interfaces);
         my $map_changed = acct_write_file('/etc/pmacct/int_map', $map_conf);
         my $conf = acct_get_config();
@@ -430,6 +447,27 @@ if ($action eq 'update') {
 if ($action eq 'list-intf') {
     my @intfs = acct_get_intfs();
     print join("\n", @intfs);
+    exit 0;
+}
+
+if ($action eq 'update-intf') { 
+    acct_log("update-intf");
+    my @interfaces = acct_read_file('/var/run/uacctd_active_interfaces');
+    my $conf_file = acct_get_conf_file();
+    if (scalar(@interfaces) > 0) {
+	my $map_conf = acct_get_int_map(@interfaces);
+	my $map_changed = acct_write_file('/etc/pmacct/int_map', $map_conf);
+	if ($map_changed) {
+		acct_log("signal reread mapping");
+		system("pkill -SIGUSR2 uacctd");
+	}
+
+    } else {
+	acct_log("stop");
+	stop_daemon();
+	system("rm -f $conf_file");
+    }
+
     exit 0;
 }
 
