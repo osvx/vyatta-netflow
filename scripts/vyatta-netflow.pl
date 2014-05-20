@@ -375,21 +375,22 @@ sub acct_get_active_interfaces {
 # main
 #
 
-my ($action, $intf, $use_late_chains);
+my ($action, $intf);
 
 GetOptions("action=s"      => \$action,
            "intf=s"        => \$intf,
-           "late"         => \$use_late_chains,
 );
 
 die "Undefined action" if ! $action;
 
-if (defined $use_late_chains) {
-    $table_chain_entry = "late";
-}
-
 if ($action eq 'add-intf') {
     die "Error: must include interface\n" if ! defined $intf;
+
+    # Checking for early/late chain
+    my $config = new Vyatta::Config;
+    $config->setLevel('system flow-accounting interface ' . $intf);
+    $table_chain_entry = 'late' if($config->exists('late'));
+
     my $interface = new Vyatta::Interface($intf);
     print "Warning : interface [$intf] does not exist on system\n" 
       if ! defined $interface;
@@ -401,6 +402,12 @@ if ($action eq 'add-intf') {
 
 if ($action eq 'del-intf') {
     die "Error: must include interface\n" if ! defined $intf;
+
+    # Checking for early/late chain
+    my $config = new Vyatta::Config;
+    $config->setLevel('system flow-accounting interface ' . $intf);
+    $table_chain_entry = 'late' if($config->existsOrig('late'));
+
     acct_log("stop [$intf]");
     acct_rm_ulog_target($intf);
     print "Removing flow-accounting for [$intf]\n";
@@ -412,7 +419,7 @@ if ($action eq 'update') {
     my $config = new Vyatta::Config;
 
     $config->setLevel('system flow-accounting interface');
-    my @interfaces = $config->returnValues();
+    my @interfaces = $config->listNodes();
     my $conf_file = acct_get_conf_file();
     if (scalar(@interfaces) > 0) {
 	my $map_interfaces = acct_get_active_interfaces(@interfaces);
@@ -458,8 +465,10 @@ if ($action eq 'update-intf') {
 	my $map_conf = acct_get_int_map(@interfaces);
 	my $map_changed = acct_write_file('/etc/pmacct/int_map', $map_conf);
 	if ($map_changed) {
-		acct_log("signal reread mapping");
-		system("pkill -SIGUSR2 uacctd");
+#		acct_log("signal reread mapping");
+#		system("pkill -SIGUSR2 uacctd");
+		acct_log("interface map changed, signal restart daemon");
+		restart_daemon($conf_file);
 	}
 
     } else {

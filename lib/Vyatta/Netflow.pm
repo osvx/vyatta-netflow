@@ -166,7 +166,7 @@ sub acct_get_intfs {
     my $config = new Vyatta::Config;
     my $path   = "system flow-accounting interface";
     $config->setLevel($path);
-    my @intfs = $config->returnOrigValues();
+    my @intfs = $config->listOrigNodes();
     return @intfs;
 }
 
