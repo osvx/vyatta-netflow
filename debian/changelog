@@ -1,3 +1,10 @@
+vyatta-netflow (0.43+osvx1+projectx1) unstable; urgency=medium
+
+  * Added interfaces map update at ppp up/down events
+  * Added support for "late" flow-accounting interface option
+
+ -- Valentin Yakovenkov <yakovenkov@gmail.com>  Sun, 01 Jun 2014 21:03:19 +0400
+
 vyatta-netflow (0.42+vyos1+helium1) unstable; urgency=low
 
   * New branch
